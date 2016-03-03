@@ -1,0 +1,107 @@
+var contentToSearch ;  // used for user picked titles
+var titles = [], descriptions = [], links = []; 
+
+$(document).ready(function(){
+$(document).bind('keypress',pressed); //listens for pressed key
+  
+function execute(){
+
+  if (contentToSearch.length === 0){
+    alert("Search box is empty");
+  }else{
+
+  var apiCallURL = "https://en.wikipedia.org/w/api.php?action=opensearch&callback=?&format=json&search="+contentToSearch+"&limit=10&namespace=0&suggest=&format=json";
+
+   $.getJSON(apiCallURL, function (json){
+     
+     if (json[1].length === 0){
+       alert("No results found");
+       return
+     }
+       titles.push(json[1]);
+       descriptions.push(json[2]);
+       links.push(json[3]);
+
+  function showResults(){
+    var html = "";
+    html += '<div class="topbuffer"></div>';
+    html += '<div class="containerForResults">'
+      for (var i = 0 ; i < json[1].length ; i++){
+        html += '<div class="topbuffer2"></div>';
+        html += '<div class = "seachResults">';
+        html += '<p class="content title">' + titles[0][i] + '</p>'
+        html += '<p class="content">' +descriptions[0][i] +'</p>'
+        html += '<a href="'+links[0][i]+'" id="link" target="_blank">' + links[0][i] + '</a>'
+        html += '</div>' + '<!--end of searchResults -->'
+      } // end of for loop
+    html += '</div>' + '<!--container for results -->'
+    return html;
+  }
+
+  $(".continue").append(showResults()); 
+     }); //end getJSON 
+      } // end of else
+    }  // end of execute function
+  
+  $("#searchB").click(wikiSearch);
+  $("#randomButton").click(RandomWikiEntry);
+
+  function wikiSearch (){
+  titles = []; descriptions = []; links= []; // empty arrays so new content is displayed
+  $( ".baseCover" ).slideUp("slow") ;       // removes title and random entry button
+  $( ".containerForResults" ).remove();     // removes previous results
+  $(".seachResults").remove();
+  contentToSearch = document.getElementById("searchInput").value;
+                                              //console.log(contentToSearch);
+  execute();
+  }
+  
+  
+  function RandomWikiEntry(){
+    $.getJSON("http://en.wikipedia.org/w/api.php?action=query&generator=random&grnnamespace=0&prop=extracts&explaintext&exintro=&format=json&callback=?", function (rjson) {
+      $(".seachResults").remove();
+      var wikiEntryId = (Object.keys(rjson.query.pages));
+      var html = "";
+      //console.log(wikiEntryId);
+      //console.log(rjson.query.pages[wikiEntryId].title);
+      //console.log(rjson.query.pages[wikiEntryId].extract);      
+       html += '<div class="topbuffer"></div>';
+       html += '<div class = "seachResults">';
+       html += '<p class="content title">' + rjson.query.pages[wikiEntryId].title + '</p>'
+       html += '<p class="content">' + rjson.query.pages[wikiEntryId].extract +'</p>'
+     html += '<a href="'+"http://en.wikipedia.org/wiki?curid="+wikiEntryId+'" id="link" target="_blank">' + wikiEntryId + '</a>'
+       html += '</div>' + '<!--end of searchResults -->'
+       $("#randomEntry").append(html);
+    });
+}  
+  
+  function pressed(e){                 //Use enter for search
+    $( "#searchInput" ).autocomplete({ autoFocus: true }); // makes sure search dropdown not present when not needed
+      if(e.keyCode === 13){  
+        event.preventDefault();
+        wikiSearch ();
+      }
+  }
+  }); //end of document ready
+
+// Adding the dropdown search
+$("#searchInput").autocomplete({
+    source: function(request, response) {
+      //$(".seachResults").remove(); 
+      //$( ".containerForResults" ).remove(); //removing all previous result for no overlay
+        $.ajax({
+            url: "http://en.wikipedia.org/w/api.php",
+            dataType: "jsonp",
+            data: {
+                'action': "opensearch",
+                'format': "json",
+                'search': request.term
+            },
+            success: function(data) {
+                response(data[1]);
+            }
+        });
+    }
+});
+
+
